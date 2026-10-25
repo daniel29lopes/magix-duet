@@ -48,9 +48,11 @@ jobs:
             for(const name of ['home','game','book']){
               const file='qa/'+name+'.png';
               if(!fs.existsSync(file)) continue;
-              const r=await github.rest.git.createBlob({...context.repo,encoding:'base64',content:fs.readFileSync(file).toString('base64')});
+              const r=await github.rest.git.createBlob({...context.repo,encoding:'utf-8',content:fs.readFileSync(file).toString('base64')});
               core.info('QA_IMAGE '+name+' '+r.data.sha);
             }
+            const lock=await github.rest.git.createBlob({...context.repo,encoding:'utf-8',content:fs.readFileSync('package-lock.json','utf8')});
+            core.info('LOCKFILE_BLOB '+lock.data.sha);
       - uses: actions/upload-artifact@v4
         with:
           name: android-assets
@@ -71,6 +73,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: 'false'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -86,7 +91,6 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.1.0.apk
-          sdkmanager 'build-tools;35.0.0' >/dev/null
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.1.0.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.1.0.apk
           cd dist

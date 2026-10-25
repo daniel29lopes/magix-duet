@@ -39,3 +39,12 @@ test('Seeded full-length run remains finite, bounded and terminates',()=>{
  }
  assert.equal(g.s.over,true);assert.ok(g.s.time>=450);assert.ok(g.s.kills>100);assert.ok(g.s.level>10);
 });
+
+test('Final defeat cannot become stuck behind a level-up dialog',()=>{
+ const g=new Game({fairies:['bloom','stella']});g.spawn=1e6;g.s.xp=100;
+ for(const p of g.s.players){p.hp=1;g.s.projectiles.push({id:p.id,x:p.x,y:p.y,vx:0,vy:0,ttl:1});}
+ g.step(.016);assert.equal(g.s.over,true);assert.equal(g.s.pause,null);
+});
+test('Flora overheal absorbs damage without granting permanent invulnerability',()=>{
+ const g=new Game({fairies:['flora']}),p=g.s.players[0];p.transform=1;g.heal(p,10);assert.equal(p.barrier,10);g.damagePlayer(p,15);assert.equal(p.hp,95);assert.equal(p.barrier,0);
+});

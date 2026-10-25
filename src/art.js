@@ -11,7 +11,7 @@ export class Renderer{
  fairy(p,t){
   const c=this.ctx,f=FAIRIES.find(f=>f.id===p.fairy)||FAIRIES[0],bob=Math.sin(t*4+p.id)*2;
   c.save();c.translate(p.x,p.y+bob);if(p.down){c.globalAlpha=.5;}
-  if(p.shield>0){c.strokeStyle='#bde8ff';c.lineWidth=2;c.beginPath();c.arc(0,0,28,0,Math.PI*2);c.stroke();}
+  if(p.shield>0||p.barrier>0){c.strokeStyle='#bde8ff';c.lineWidth=2;c.beginPath();c.arc(0,0,28,0,Math.PI*2);c.stroke();}
   c.fillStyle='#0004';c.beginPath();c.ellipse(0,21-bob,15,5,0,0,Math.PI*2);c.fill();
   c.globalAlpha=p.down?.4:.8;c.fillStyle=f.color;c.strokeStyle='#ffffffb0';c.lineWidth=.7;
   const flap=1+Math.sin(t*9)*.15;

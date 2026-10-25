@@ -82,7 +82,7 @@ public final class MainActivity extends Activity {
   List<String> result=new ArrayList<>();
   try{Enumeration<NetworkInterface> all=NetworkInterface.getNetworkInterfaces();while(all.hasMoreElements()){
    NetworkInterface n=all.nextElement();if(!n.isUp()||n.isLoopback())continue;
-   Enumeration<InetAddress> list=n.getInetAddresses();while(list.hasMoreElements()){InetAddress a=list.nextElement();if(a instanceof Inet4Address&&!a.isLoopbackAddress()&&a.isSiteLocalAddress())result.add(a.getHostAddress());}
+   Enumeration<InetAddress> list=n.getInetAddresses();while(list.hasMoreElements()){InetAddress a=list.nextElement();if(a instanceof Inet4Address&&!a.isLoopbackAddress()&&a.isSiteLocalAddress()){if(n.getName().contains("wlan")||n.getName().startsWith("ap"))result.add(0,a.getHostAddress());else result.add(a.getHostAddress());}}
   }}catch(Exception ignored){}
   return result;
  }

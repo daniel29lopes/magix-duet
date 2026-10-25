@@ -8,7 +8,7 @@ export class Game {
   this.s={version:1,runId,time:0,level:1,xp:0,xpNeed:20,kills:0,coins:0,bossKills:0,bond:0,bondBursts:0,over:false,won:false,pause:null,guestAck:0,unlocks:[...unlocks],players:[],enemies:[],shots:[],gems:[],chests:[],fx:[],projectiles:[]};
   this.upgrades=upgrades;
   fairies.forEach((id,i)=>{const f=FAIRIES.find(f=>f.id===id)||FAIRIES[0];const max=100+(upgrades.vigor||0)*8;
-   this.s.players.push({id:i,name:String(names[i]||('Fada '+(i+1))).slice(0,24),fairy:f.id,x:1100+i*70,y:1100,hp:max,maxHp:max,down:false,revive:0,shield:0,inv:0,ultimate:0,weapons:[{id:f.weapon,level:1,evolved:false}],passives:{},evolvedEver:[],fusionEver:[],transform:0,stats:{gems:0,healed:0,sonicKills:0,droneKills:0,waterHits:0,boss:0},rerolls:2});
+   this.s.players.push({id:i,name:String(names[i]||('Fada '+(i+1))).slice(0,24),fairy:f.id,x:1100+i*70,y:1100,hp:max,maxHp:max,down:false,revive:0,shield:0,barrier:0,barrierTtl:0,motion:0,inv:0,ultimate:0,weapons:[{id:f.weapon,level:1,evolved:false}],passives:{},evolvedEver:[],fusionEver:[],transform:0,stats:{gems:0,healed:0,sonicKills:0,droneKills:0,waterHits:0,boss:0},rerolls:2});
   });
  }
  save(){return JSON.parse(JSON.stringify({state:this.s,id:this.id,spawn:this.spawn,bosses:[...this.bosses],clocks:this.weaponClocks,upgrades:this.upgrades}));}
@@ -68,11 +68,12 @@ export class Game {
   if(c.type==='leave')this.finish(false);
  }
  effect(x,y,text,color='#ead5ff',kind='text'){this.s.fx.push({id:this.next(),x,y,text,color,kind,ttl:1.1});if(this.s.fx.length>45)this.s.fx.shift();}
- heal(p,n){const amount=Math.min(n,p.maxHp-p.hp);p.hp+=amount;p.stats.healed+=amount;}
+ heal(p,n){if(n<=0||p.down)return;const amount=Math.min(n,Math.max(0,p.maxHp-p.hp));p.hp+=amount;p.stats.healed+=amount;if(p.fairy==='flora'&&p.transform>0&&n>1&&n>amount){p.barrier=Math.min(20,(p.barrier||0)+n-amount);p.barrierTtl=5;}}
+ damagePlayer(p,n){const absorbed=Math.min(p.barrier||0,n);p.barrier=Math.max(0,(p.barrier||0)-absorbed);p.hp=Math.max(0,p.hp-n+absorbed);if(p.hp<=0)p.down=true;}
  stats(p){
   const a=p.passives,u=this.upgrades;return{power:(1+.08*(a.heart||0)+.06*(u.power||0))*(1+p.transform*.2),
    haste:1+.06*(a.core||0)+.03*(u.haste||0),area:1+.06*(a.fork||0),speed:165*(1+.05*(a.pearl||0)),
-   regen:.12*(u.recovery||0)+.25*(a.seed||0),magnet:125+22*(a.magnet||0)+12*(u.reach||0),
+   regen:.12*(u.recovery||0)+.25*(a.seed||0),magnet:125+22*(a.magnet||0)+12*(u.reach||0)+(p.weapons.some(w=>w.id==='stars'&&w.evolved)?60:0),
    crit:.05+.05*(a.prism||0),resist:.04*(a.moonstone||0),duration:1+.1*(a.hourglass||0)};
  }
  checkTransform(p){
@@ -92,7 +93,7 @@ export class Game {
  nearest(p,range=800){let nearest=null,d=range;for(const e of this.s.enemies){const dd=distance(e,p);if(e.hp>0&&dd<d){d=dd;nearest=e;}}return nearest;}
  hurt(e,amount,p,weapon,tag=true){
   if(e.hp<=0)return;const st=this.stats(p),crit=this.random()<st.crit,damage=amount*(crit?1.7:1)*(e.sonic>0?1.18:1);
-  e.hp-=damage;this.effect(e.x,e.y-15,Math.round(damage).toString(),crit?'#ffe6a3':'#e9dfff');
+  e.hp-=damage;if(crit&&p.fairy==='stella'&&p.transform>0&&weapon!=='stella-bonus'){const other=this.s.enemies.find(n=>n!==e&&n.hp>0&&distance(n,e)<150);if(other)this.hurt(other,amount*.3,p,'stella-bonus');}this.effect(e.x,e.y-15,Math.round(damage).toString(),crit?'#ffe6a3':'#e9dfff');
   if(e.hp>0||!tag)return;
   const s=this.s;s.kills++;s.xp+=1;p.ultimate=Math.min(100,p.ultimate+2.5);
   if(e.sonic>0)p.stats.sonicKills++;if(['discs','orchestra'].includes(weapon))p.stats.droneKills++;
@@ -106,8 +107,8 @@ export class Game {
   const target=this.nearest(p);if(!target)return;
   const def=weaponInfo(w.id),st=this.stats(p),fusion=!WEAPONS[w.id];
   const bonus=(1+(w.level-1)*.21)*(w.evolved&&!fusion?2.1:1);
-  this.weaponClocks[key]=def.rate/st.haste*(p.fairy==='musa'&&p.transform>0&&this.random()<.2?.25:1);
-  const angle=Math.atan2(target.y-p.y,target.x-p.x),count=['sun','discs','orchestra'].includes(w.id)?1+Math.floor(w.level/3)+(w.evolved?2:0):1+(w.level>=6?1:0);
+  p.beat=(p.beat||0)+1;this.weaponClocks[key]=p.fairy==='musa'&&p.transform>0&&p.beat%5===0?.1:def.rate/st.haste;
+  const angle=Math.atan2(target.y-p.y,target.x-p.x),count=['sun','discs','orchestra'].includes(w.id)?1+Math.floor(w.level/3)+(w.evolved?2:0)+(p.fairy==='tecna'&&p.transform>0?1:0):1+(w.level>=6?1:0);
   if(['lightning','polar'].includes(w.id)){
    let previous=p;const hit=new Set();for(let n=0;n<2+(p.passives.conductor||0)+(w.evolved?2:0);n++){
     let next=null,best=360;for(const e of this.s.enemies)if(e.hp>0&&!hit.has(e.id)){const d=distance(previous,e);if(d<best){best=d;next=e;}}
@@ -119,7 +120,7 @@ export class Game {
    const r=(w.id==='sound'?180:150)*st.area*(w.evolved?1.35:1);
    this.s.fx.push({id:this.next(),kind:'ring',x:p.x,y:p.y,r,color:def.color,ttl:.45});
    for(const e of this.s.enemies)if(e.hp>0&&distance(e,p)<r){if(w.id==='sound')e.sonic=3*st.duration;else e.root=1.5*st.duration;
-    if(w.id==='sound'&&e.burn>0)e.burn=Math.max(e.burn,3);
+    if(w.id==='sound'&&e.burn>0){e.burn=Math.max(e.burn,3);for(const n of this.s.enemies)if(n.hp>0&&distance(n,e)<85){n.burn=Math.max(n.burn,2);n.burnOwner=e.burnOwner;}}
     if(w.id==='vines'&&e.frozen>0)e.frozen+=.6;
     this.hurt(e,def.damage*bonus*st.power,p,w.id);
    }
@@ -130,6 +131,7 @@ export class Game {
    const r=90*st.area;for(const e of this.s.enemies)if(e.hp>0&&distance(e,p)<r)this.hurt(e,def.damage*bonus*st.power,p,w.id);
    if(w.evolved)this.s.projectiles=this.s.projectiles.filter(b=>distance(b,p)>r);return;
   }
+  if(w.id==='galaxy'){const r=110*st.area;for(const e of this.s.enemies)if(e.hp>0&&distance(e,p)<r)this.hurt(e,def.damage*bonus*st.power*.5,p,w.id);this.s.projectiles=this.s.projectiles.filter(b=>distance(b,p)>r);}
   for(let n=0;n<count;n++){
    const a=angle+(n-(count-1)/2)*.19;
    this.s.shots.push({id:this.next(),x:p.x,y:p.y,vx:Math.cos(a)*def.speed,vy:Math.sin(a)*def.speed,ttl:2.1,
@@ -163,7 +165,8 @@ export class Game {
   for(const p of s.players){
    if(p.down)continue;const st=this.stats(p),input=this.in[p.id]||{x:0,y:0};
    p.x=clamp(p.x+input.x*st.speed*dt,25,caps.w-25);p.y=clamp(p.y+input.y*st.speed*dt,25,caps.h-25);
-   p.inv=Math.max(0,p.inv-dt);p.shield=Math.max(0,p.shield-dt);this.heal(p,st.regen*dt);
+   p.inv=Math.max(0,p.inv-dt);p.shield=Math.max(0,p.shield-dt);p.barrierTtl=Math.max(0,(p.barrierTtl||0)-dt);if(!p.barrierTtl)p.barrier=0;this.heal(p,st.regen*dt);
+   if(p.fairy==='aisha'&&p.transform>0){p.motion=(p.motion||0)+Math.hypot(input.x,input.y)*st.speed*dt;if(p.motion>=250){p.motion=0;p.shield=1;this.s.fx.push({id:this.next(),kind:'ring',x:p.x,y:p.y,r:150,color:'#7cdbef',ttl:.5});for(const e of s.enemies)if(e.hp>0&&distance(e,p)<150){e.wet=3;this.hurt(e,25*st.power,p,'water');}}}
    for(const w of p.weapons)this.attack(p,w,dt);
    this.checkTransform(p);
   }
@@ -190,7 +193,7 @@ export class Game {
    let target=living[0];for(const p of living)if(distance(e,p)<distance(e,target))target=p;
    const d=distance(e,target)||1,slow=e.frozen>0?0:e.root>0?.1:1;
    e.x+=(target.x-e.x)/d*e.speed*slow*dt;e.y+=(target.y-e.y)/d*e.speed*slow*dt;
-   if(d<e.r+15&&target.inv<=0&&target.shield<=0){target.hp-= (e.boss?18:9)*(1-this.stats(target).resist);target.inv=.7;this.effect(target.x,target.y-25,'−'+(e.boss?18:9),'#ff94a7');if(target.hp<=0){target.hp=0;target.down=true;}}
+   if(d<e.r+15&&target.inv<=0&&target.shield<=0){this.damagePlayer(target,(e.boss?18:9)*(1-this.stats(target).resist));target.inv=.7;this.effect(target.x,target.y-25,'−'+(e.boss?18:9),'#ff94a7');if(target.hp<=0){target.hp=0;target.down=true;}}
    if(e.boss&&e.frozen<=0){e.shotClock-=dt;if(e.shotClock<=0){e.shotClock=3;for(let k=0;k<8;k++){const a=k*Math.PI/4+s.time*.2;s.projectiles.push({id:this.next(),x:e.x,y:e.y,vx:Math.cos(a)*110,vy:Math.sin(a)*110,ttl:4});}}}
   }
   for(const b of s.shots){
@@ -202,11 +205,14 @@ export class Game {
     if(['flame','phoenix'].includes(b.weapon)){e.burn=3*this.stats(p).duration;e.burnOwner=p.id;}
     if(['ice','polar'].includes(b.weapon))e.frozen=1.2*this.stats(p).duration+(e.root>0?.8:0);
     if(b.weapon==='water'){e.wet=3;e.x+=b.vx*.08;e.y+=b.vy*.08;p.stats.waterHits++;}
-    this.hurt(e,b.damage,p,b.weapon);b.pierce--;if(b.pierce<=0){b.ttl=0;break;}
+    this.hurt(e,b.damage,p,b.weapon);
+    if((b.evolved&&['flame','stars'].includes(b.weapon))||b.weapon==='phoenix'){this.s.fx.push({id:this.next(),kind:'ring',x:e.x,y:e.y,r:75,color:b.color,ttl:.25});for(const n of s.enemies)if(n!==e&&n.hp>0&&distance(n,e)<75)this.hurt(n,b.damage*.35,p,b.weapon);}
+    if(b.evolved&&b.weapon==='sun'){const next=s.enemies.filter(n=>n.hp>0&&!b.hit.includes(n.id)&&distance(n,e)<350).sort((a,b)=>distance(a,e)-distance(b,e))[0];if(next){const a=Math.atan2(next.y-b.y,next.x-b.x),speed=Math.hypot(b.vx,b.vy);b.vx=Math.cos(a)*speed;b.vy=Math.sin(a)*speed;}}
+    b.pierce--;if(b.pierce<=0){b.ttl=0;break;}
    }
   }
   for(const b of s.projectiles){b.x+=b.vx*dt;b.y+=b.vy*dt;b.ttl-=dt;
-   for(const p of living)if(p.inv<=0&&p.shield<=0&&distance(p,b)<20){p.hp-=8;p.inv=.6;b.ttl=0;if(p.hp<=0){p.hp=0;p.down=true;}}
+   for(const p of living)if(p.inv<=0&&p.shield<=0&&distance(p,b)<20){this.damagePlayer(p,8);p.inv=.6;b.ttl=0;if(p.hp<=0){p.hp=0;p.down=true;}}
   }
   for(const gem of s.gems){let p=living[0];for(const a of living)if(distance(a,gem)<distance(p,gem))p=a;
    const d=distance(gem,p);if(d<this.stats(p).magnet){gem.x+=(p.x-gem.x)*Math.min(1,dt*9);gem.y+=(p.y-gem.y)*Math.min(1,dt*9);}
@@ -215,6 +221,7 @@ export class Game {
   for(const c of s.chests)if(living.some(p=>distance(p,c)<55)){c.open=true;for(const p of s.players)if(!p.down)this.evolve(p);s.xp+=35;}
   s.enemies=s.enemies.filter(e=>e.hp>0);s.shots=s.shots.filter(b=>b.ttl>0);s.projectiles=s.projectiles.filter(b=>b.ttl>0);
   s.gems=s.gems.filter(g=>g.v>0).slice(-300);s.chests=s.chests.filter(c=>!c.open);
+  s.fx=s.fx.slice(-60);if(!s.over&&s.players.every(p=>p.down)){this.finish(false);return;}
   if(!s.over&&s.xp>=s.xpNeed)this.levelUp();
   if(s.time>=540)this.finish(false);
  }
