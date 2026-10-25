@@ -155,6 +155,7 @@ public final class MainActivity extends Activity {
     try{out=file.startWrite();out.write(value.getBytes(StandardCharsets.UTF_8));file.finishWrite(out);}catch(Exception e){if(out!=null)file.failWrite(out);}
    }});
   }
+  @JavascriptInterface public void copy(String value){if(value==null||value.length()>10000)return;runOnUiThread(()->{android.content.ClipboardManager manager=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);if(manager!=null)manager.setPrimaryClip(ClipData.newPlainText("Magix Duet",value));});}
   @JavascriptInterface public void share(String value){if(value==null||value.length()>3000)return;runOnUiThread(()->{Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,value);startActivity(Intent.createChooser(i,"Partilhar convite"));});}
   @JavascriptInterface public void shareApk(){workers.execute(()->{try{
    File dir=new File(getCacheDir(),"shared");dir.mkdirs();File target=new File(dir,"Magix-Duet.apk");

@@ -1,7 +1,7 @@
 # Magix Duet
 Jogo Android cooperativo de fadas mágicas, inspirado em Winx e em jogos de sobrevivência com ataques automáticos.
 
-[Descarregar APK Android](https://github.com/daniel29lopes/magix-duet/releases/download/v0.1.0/Magix-Duet-0.1.0.apk) · [Compilações e testes](https://github.com/daniel29lopes/magix-duet/actions)
+[Descarregar APK Android](https://github.com/daniel29lopes/magix-duet/releases/download/v0.1.1/Magix-Duet-0.1.1.apk) · [Compilações e testes](https://github.com/daniel29lopes/magix-duet/actions)
 
 O download só fica disponível quando a compilação e as verificações terminarem com sucesso.
 
@@ -31,30 +31,31 @@ A sincronização cloud guarda progresso, conquistas e melhorias. Esta versão n
 - Sem anúncios nem compras com dinheiro real.
 
 ## Contas e dados
-A autenticação usa o Supabase Auth. As palavras-passe não entram nos saves de equipa ou nas cópias exportadas. O único identificador de API incluído na app é a chave publicável; o acesso aos dados exige sessão e pertença à equipa.
+A autenticação usa nome de conta e palavra-passe, com Supabase Auth. Os nomes de conta são identificadores do jogo; não é necessário email. Guarda o código de recuperação mostrado na criação. As palavras-passe não entram nos saves de equipa ou nas cópias exportadas. O único identificador de API incluído na app é a chave publicável; o acesso aos dados exige sessão e pertença à equipa.
 
 O registo de recompensas usa IDs de partida e união de eventos, evitando moedas duplicadas quando ambos guardam a mesma partida. Compras offline simultâneas são ordenadas de forma determinística: o saldo nunca fica negativo; compras sem saldo ficam pendentes e podem ser canceladas no Atelier.
 
 O projeto cloud está na organização do proprietário. O plano atual é Free; aplicam-se as quotas e políticas do fornecedor.
 
 ## Desenvolvimento
-Node 22, Java 17, Gradle 8.9 e Android SDK 35.
+Node 22, Java 17, Gradle 8.9 e Android SDK 35. Os testes incluem uma verificação online com contas temporárias eliminadas no final.
 
-    npm install
+    npm ci
     npm test
     npm run build
     npm run test:ui
     gradle assembleDebug
 
-O GitHub Actions compila, verifica e publica a versão beta. O APK usa assinatura de desenvolvimento. As credenciais de conta nunca devem ser adicionadas ao repositório.
+O GitHub Actions compila, verifica e publica a versão beta. O APK usa assinatura de desenvolvimento. A chave de desenvolvimento é retida na cache privada de Actions, sujeita à política de retenção do GitHub; uma futura distribuição estável deverá usar uma chave de lançamento guardada pelo proprietário. As credenciais de conta nunca devem ser adicionadas ao repositório.
 
 - src/engine.js: regras de combate e evoluções.
 - src/data.js: fadas, armas, receitas, melhorias e temas.
 - src/ledger.js: convergência do progresso da equipa.
 - src/cloud.js: autenticação e sincronização HTTPS.
+- supabase/functions/magix-account: criação de identidades por nome, recuperação e limites de tentativas.
 - src/main.js: interface, input e coordenação da partida.
 - app/src/main/java/pt/magix/duet/MainActivity.java: aplicação Android, servidor TCP local, backups e partilha.
 - supabase/schema.sql: esquema e controlo de acesso.
 - supabase/verify.sql: verificações transacionais com dados de teste revertidos.
 
-A compilação e os testes de navegador não substituem a verificação em dois telemóveis físicos; o teste de rede no navegador usa um transporte de teste.
+O protocolo TCP nativo é verificado num teste Java, além do teste cooperativo no navegador. A verificação automática não substitui o teste em dois telemóveis físicos.

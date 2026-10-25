@@ -30,20 +30,19 @@ test('Two peers share a host world, pause together and deduplicate the result',a
  await expect(page.getByText('A magia venceu.',{exact:true})).toBeVisible();await expect(guest.getByText('A magia venceu.',{exact:true})).toBeVisible();
  const a=await page.evaluate(()=>window.MagixTest.derive()),b=await guest.evaluate(()=>window.MagixTest.derive());expect(a.runs).toBe(1);expect(b.runs).toBe(1);expect(a.coins).toBe(b.coins);await guest.close();
 });
-test('Cloud sign-up confirmation and login keep passwords out of saves',async({page})=>{
+test('Cloud username accounts and recovery codes keep passwords out of saves',async({page})=>{
  let doc=null;
  await page.route('https://atsfnttvxhjqhmtqmtgj.supabase.co/**',async route=>{
   const url=route.request().url();let result={};
-  if(url.includes('/signup'))result={user:{id:'test-user'}};
-  if(url.includes('grant_type=password'))result={access_token:'test-access',refresh_token:'test-refresh',expires_in:3600,user:{id:'test-user',email:'test@example.invalid'}};
+  if(url.includes('/functions/v1/magix-account'))result={ok:true,username:'test_account',recovery_code:'1234567890123456789012345678901234567890'};
+  if(url.includes('grant_type=password'))result={access_token:'test-access',refresh_token:'test-refresh',expires_in:3600,user:{id:'test-user',email:'test_account@accounts.magix.invalid',user_metadata:{magix_username:'test_account'}}};
   if(url.includes('/magix_dashboard'))result=doc?{team:doc,code:'ABCDEF123456',members:[{id:'test-user',name:'Daniel'}]}:null;
   if(url.includes('/magix_create_team')){doc=JSON.parse(route.request().postData()).p_doc;result={team:doc,code:'ABCDEF123456',members:[{id:'test-user',name:'Daniel'}]};}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
  });
  await setup(page);await page.locator('[data-action="page"][data-value="team"]').click();await page.locator('[data-action="cloud"]').click();
- await page.locator('#auth-form input[name="email"]').fill('test@example.invalid');await page.locator('#auth-form input[name="password"]').fill('OnlyForThisTest123!');
- await page.locator('#auth-form button[value="signup"]').click();await expect(page.locator('#auth-error')).toContainText('Confirma');
- await page.locator('#auth-form input[name="password"]').fill('OnlyForThisTest123!');await page.locator('#auth-form button[value="login"]').click();await expect(page.locator('[data-action="cloud-create"]')).toBeVisible();
+ await page.locator('#auth-form input[name="username"]').fill('test_account');await page.locator('#auth-form input[name="password"]').fill('OnlyForThisTest123!');
+ await page.locator('#auth-form button[value="signup"]').click();await expect(page.getByText('Guarda este código.',{exact:true})).toBeVisible();await page.locator('[data-action="cloud-continue"]').click();await expect(page.locator('[data-action="cloud-create"]')).toBeVisible();
  await page.locator('[data-action="cloud-create"]').click();await expect(page.locator('.invite')).toContainText('ABCDEF123456');
  expect(await page.evaluate(()=>JSON.stringify(window.MagixTest.state))).not.toContain('OnlyForThisTest123!');
 });

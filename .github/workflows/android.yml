@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install pinned dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Verify combat and save convergence
         run: npm test
       - name: Build offline Android assets
@@ -72,6 +72,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify real native TCP host and guest
+        run: node scripts/test-lan.mjs
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
@@ -82,19 +87,25 @@ jobs:
       - name: Retain development signing identity between builds
         uses: actions/cache@v4
         with:
-          path: ~/.android/debug.keystore
-          key: magix-duet-development-signing-v1
+          path: ~/.android/magix-duet-development.jks
+          key: magix-duet-development-signing-v2
+      - name: Create development signing key when absent
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/magix-duet-development.jks" ]; then
+            keytool -genkeypair -keystore "$HOME/.android/magix-duet-development.jks" -storepass android -keypass android -alias androiddebugkey -dname "CN=Magix Duet Development,O=Magix Duet,C=PT" -keyalg RSA -keysize 2048 -validity 10000
+          fi
       - name: Compile Android app
         run: gradle --no-daemon assembleDebug
       - name: Verify APK signature and Android package
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.1.0.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.1.0.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.1.0.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.1.1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.1.1.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.1.1.apk
           cd dist
-          sha256sum Magix-Duet-0.1.0.apk > SHA256SUMS.txt
+          sha256sum Magix-Duet-0.1.1.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Magix-Duet-Android
@@ -103,9 +114,9 @@ jobs:
       - name: Publish downloadable Android beta
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.0
+          tag_name: v0.1.1
           target_commitish: ${{ github.sha }}
-          name: Magix Duet 0.1.0 — Android beta
+          name: Magix Duet 0.1.1 — Android beta
           prerelease: true
           body: |
             APK Android para instalar e partilhar.
@@ -117,5 +128,5 @@ jobs:
             Esta é uma versão beta assinada para desenvolvimento. Não foi publicada na Play Store.
             Verificações automáticas: simulação de combate, convergência de saves, interface mobile, sessão com dois pares e assinatura do APK.
           files: |
-            dist/Magix-Duet-0.1.0.apk
+            dist/Magix-Duet-0.1.1.apk
             dist/SHA256SUMS.txt

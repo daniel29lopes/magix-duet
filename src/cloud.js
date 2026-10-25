@@ -10,9 +10,9 @@ export class Cloud{
    if(auth&&this.session?.access_token)headers.Authorization='Bearer '+this.session.access_token;
    const r=await fetch(CLOUD.url+path,{method,headers,body:method==='GET'?undefined:JSON.stringify(body||{}),signal:abort.signal});
    const raw=await r.text();let data={};try{data=raw?JSON.parse(raw):{};}catch{}
-   if(!r.ok){const code=data.error_code||data.code||data.error;
+   if(!r.ok){if(path.startsWith('/functions/')&&typeof data?.error==='string')throw new Error(data.error);const code=data.error_code||data.code||data.error;
     if(code==='email_not_confirmed')throw new Error('Confirma o teu email e volta a entrar.');
-    if(code==='invalid_credentials'||r.status===401)throw new Error('Não foi possível entrar. Confirma o email e a palavra-passe.');
+    if(code==='invalid_credentials'||r.status===401)throw new Error('Não foi possível entrar. Confirma o nome de conta e a palavra-passe.');
     if(r.status===429)throw new Error('Foram feitas várias tentativas. Aguarda um pouco e tenta novamente.');
     throw new Error(path.includes('/auth/')?'Não foi possível concluir. Confirma os dados e tenta novamente.':'Não foi possível sincronizar a equipa. Tenta novamente com internet.');
    }
@@ -20,21 +20,26 @@ export class Cloud{
   }catch(e){if(e.name==='AbortError'||e instanceof TypeError)throw new Error('Sem ligação à cloud. O progresso continua guardado neste telemóvel.');throw e;}
   finally{clearTimeout(timer);}
  }
- setSession(value){this.session=value?.access_token?{access_token:value.access_token,refresh_token:value.refresh_token,expires_at:Date.now()/1000+(value.expires_in||3600),user:{id:value.user?.id,email:value.user?.email}}:null;this.onSession(this.session);}
+ setSession(value){this.session=value?.access_token?{access_token:value.access_token,refresh_token:value.refresh_token,expires_at:Date.now()/1000+(value.expires_in||3600),user:{id:value.user?.id,email:value.user?.email,username:value.user?.user_metadata?.magix_username||value.user?.email?.split('@')[0]}}:null;this.onSession(this.session);}
  async token(){
   if(!this.session)throw new Error('Entra na tua conta para sincronizar.');
   if(this.session.expires_at>Date.now()/1000+90)return;
   if(!this.refreshing)this.refreshing=this.request('/auth/v1/token?grant_type=refresh_token',{refresh_token:this.session.refresh_token},{auth:false}).then(d=>this.setSession(d)).finally(()=>this.refreshing=null);
   await this.refreshing;
  }
- async signIn(email,password){const d=await this.request('/auth/v1/token?grant_type=password',{email,password},{auth:false});this.setSession(d);return d;}
- async signUp(email,password,name){
-  if(password.length<8)throw new Error('Escolhe uma palavra-passe com pelo menos 8 caracteres.');
-  const d=await this.request('/auth/v1/signup',{email,password,data:{display_name:name}},{auth:false});
-  if(d.access_token)this.setSession(d);return{confirmed:!!d.access_token};
+ accountName(value){const name=String(value||'').trim().toLowerCase();if(!/^[a-z0-9_]{3,24}$/.test(name))throw new Error('Usa um nome de conta com 3–24 letras, números ou _.');return name;}
+ async signIn(username,password){username=this.accountName(username);const d=await this.request('/auth/v1/token?grant_type=password',{email:username+'@accounts.magix.invalid',password},{auth:false});this.setSession(d);return d;}
+ async signUp(username,password,name){
+  username=this.accountName(username);if(password.length<8)throw new Error('Escolhe uma palavra-passe com pelo menos 8 caracteres.');
+  const d=await this.request('/functions/v1/magix-account',{action:'register',username,password,name},{auth:false});
+  await this.signIn(username,password);return{confirmed:true,recovery_code:d.recovery_code,username};
+ }
+ async recover(username,code,password){
+  username=this.accountName(username);
+  const d=await this.request('/functions/v1/magix-account',{action:'recover',username,password,recovery_code:code},{auth:false});
+  await this.signIn(username,password);return d;
  }
  async signOut(){try{if(this.session)await this.request('/auth/v1/logout',{});}finally{this.setSession(null);this.info=null;}}
- async recover(email){await this.request('/auth/v1/recover',{email},{auth:false});}
  async rpc(name,body={}){return this.request('/rest/v1/rpc/'+name,body);}
  async dashboard(){this.info=await this.rpc('magix_dashboard');return this.info;}
  async create(team,name){this.info=await this.rpc('magix_create_team',{p_doc:team,p_display_name:name});return this.info;}

@@ -90,7 +90,7 @@ export class Game {
   if(w){w.evolved=true;p.evolvedEver.push(w.id);this.effect(p.x,p.y-35,WEAPONS[w.id].evolution,WEAPONS[w.id].color,'burst');this.checkTransform(p);return w.id;}
   this.heal(p,20);s.coins+=20;return null;
  }
- nearest(p,range=800){let nearest=null,d=range;for(const e of this.s.enemies){const dd=distance(e,p);if(e.hp>0&&dd<d){d=dd;nearest=e;}}return nearest;}
+ nearest(p,range=420){let nearest=null,d=range;for(const e of this.s.enemies){const dd=distance(e,p);if(e.hp>0&&dd<d){d=dd;nearest=e;}}return nearest;}
  hurt(e,amount,p,weapon,tag=true){
   if(e.hp<=0)return;const st=this.stats(p),crit=this.random()<st.crit,damage=amount*(crit?1.7:1)*(e.sonic>0?1.18:1);
   e.hp-=damage;if(crit&&p.fairy==='stella'&&p.transform>0&&weapon!=='stella-bonus'){const other=this.s.enemies.find(n=>n!==e&&n.hp>0&&distance(n,e)<150);if(other)this.hurt(other,amount*.3,p,'stella-bonus');}this.effect(e.x,e.y-15,Math.round(damage).toString(),crit?'#ffe6a3':'#e9dfff');
@@ -141,7 +141,7 @@ export class Game {
  }
  spawnEnemy(boss=false,final=false){
   const s=this.s,alive=s.players.filter(p=>!p.down);if(!alive.length)return;
-  const target=alive[Math.floor(this.random()*alive.length)],a=this.rand(0,Math.PI*2),d=boss?490:570;
+  const target=alive[Math.floor(this.random()*alive.length)],a=this.rand(0,Math.PI*2),d=boss?430:470;
   const tier=Math.floor(s.time/70),elite=!boss&&this.random()<.08;const health=(boss?400+s.time*3:elite?55:22)*(1+tier*.28)*(s.players.length===2?1.45:1);
   s.enemies.push({id:this.next(),x:clamp(target.x+Math.cos(a)*d,35,caps.w-35),y:clamp(target.y+Math.sin(a)*d,35,caps.h-35),
    hp:health,maxHp:health,boss,final,elite,r:boss?35:elite?19:13,speed:boss?48:45+tier*5+(elite?12:0),type:boss?'boss':Math.floor(this.rand(0,3)),
