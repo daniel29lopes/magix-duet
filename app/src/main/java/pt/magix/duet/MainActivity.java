@@ -28,7 +28,7 @@ public final class MainActivity extends Activity {
  private volatile String roomCode="",lastInvitation="",exportValue="";
  private volatile boolean hosting=false;
  private final Object stateLock=new Object();
- private static final int MAX_PACKET=1024*1024,MAX_SAVE=8*1024*1024;
+ private static final int MAX_PACKET=4*1024*1024,MAX_SAVE=8*1024*1024;
  @Override public void onCreate(Bundle b){
   super.onCreate(b);
   getWindow().setStatusBarColor(0xff16132b);getWindow().setNavigationBarColor(0xff16132b);
@@ -175,7 +175,7 @@ public final class MainActivity extends Activity {
   }catch(Exception e){emit("networkError","Não foi possível abrir esta cópia.");}});
  }
  @Override protected void onNewIntent(Intent intent){super.onNewIntent(intent);setIntent(intent);if(intent.getData()!=null){lastInvitation=intent.getData().toString();emit("invitation",lastInvitation);}}
- @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("window.magixBack&&window.magixBack()",null);}
+ @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("window.magixBack?window.magixBack():false",value->{if("false".equals(value))finish();});}
  @Override protected void onPause(){if(web!=null)web.evaluateJavascript("window.magixBackground&&window.magixBackground()",null);super.onPause();}
  @Override protected void onResume(){super.onResume();if(web!=null)web.onResume();}
  @Override protected void onDestroy(){closeNetwork();workers.shutdownNow();writer.shutdownNow();storage.shutdown();if(web!=null){web.removeJavascriptInterface("MagixAndroid");web.destroy();web=null;}super.onDestroy();}

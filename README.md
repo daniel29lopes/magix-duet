@@ -1,5 +1,60 @@
 # Magix Duet
+Jogo Android cooperativo de fadas mágicas, inspirado em Winx e em jogos de sobrevivência com ataques automáticos.
 
-Jogo Android cooperativo de fadas, com partidas alojadas num dos telemóveis por Wi-Fi/hotspot e sincronização opcional do progresso de equipa na cloud.
+[Descarregar APK Android](https://github.com/daniel29lopes/magix-duet/releases/download/v0.1.0/Magix-Duet-0.1.0.apk) · [Compilações e testes](https://github.com/daniel29lopes/magix-duet/actions)
 
-Desenvolvimento em curso. O APK será publicado após compilação e verificações.
+O download só fica disponível quando a compilação e as verificações terminarem com sucesso.
+
+## Jogar a dois
+1. Instalem o mesmo APK nos dois telemóveis. Android 8.0+, com Android System WebView atualizado.
+2. Criem os perfis locais. Para guardar online, abram **Equipa → Criar conta / Entrar**.
+3. Uma pessoa guarda a equipa na cloud e partilha o código de equipa de 12 caracteres. A outra entra com a sua conta e esse código. Também é possível usar a mesma conta nos dois telemóveis, mantendo nomes locais diferentes.
+4. Liguem-se ao mesmo Wi-Fi ou um ao hotspot do outro. Não é necessária internet para a partida.
+5. **Jogar a dois → Criar sala** num telemóvel; no outro, **Entrar na sala** e colar o convite.
+6. O anfitrião inicia a partida e mantém a app aberta. Ambos podem pausar; ambos têm de confirmar para continuar.
+
+A sincronização cloud guarda progresso, conquistas e melhorias. Esta versão não liga partidas entre redes diferentes pela internet.
+
+## O jogo
+- Bloom, Stella, Flora, Musa, Tecna e Aisha, com armas de origem diferentes.
+- 10 armas e 10 acessórios; 4 espaços para cada categoria.
+- Evoluções: arma nível 8 + acessório correto nível 5 + baú de boss.
+- 5 fusões: duas armas evoluídas + um novo baú.
+- Transformações Enchantix e Believix, desbloqueadas para a equipa.
+- Bosses progressivos e boss final aos 7:30; limite de 9 minutos.
+- Combos elementais, ligação cooperativa e reanimação de uma parceira caída.
+- Grimório completo na pausa, com pesquisa e receita fixada.
+- 6 melhorias permanentes com 10 níveis; conquistas partilhadas.
+- Temas Magix e Reino Lunar; dados de conteúdo separados para futuras atualizações.
+- Saves automáticos, retoma de partidas a solo e exportação/importação de equipas.
+- Botão para partilhar o próprio APK a partir da app.
+- Sem anúncios nem compras com dinheiro real.
+
+## Contas e dados
+A autenticação usa o Supabase Auth. As palavras-passe não entram nos saves de equipa ou nas cópias exportadas. O único identificador de API incluído na app é a chave publicável; o acesso aos dados exige sessão e pertença à equipa.
+
+O registo de recompensas usa IDs de partida e união de eventos, evitando moedas duplicadas quando ambos guardam a mesma partida. Compras offline simultâneas são ordenadas de forma determinística: o saldo nunca fica negativo; compras sem saldo ficam pendentes e podem ser canceladas no Atelier.
+
+O projeto cloud está na organização do proprietário. O plano atual é Free; aplicam-se as quotas e políticas do fornecedor.
+
+## Desenvolvimento
+Node 22, Java 17, Gradle 8.9 e Android SDK 35.
+
+    npm install
+    npm test
+    npm run build
+    npm run test:ui
+    gradle assembleDebug
+
+O GitHub Actions compila, verifica e publica a versão beta. O APK usa assinatura de desenvolvimento. As credenciais de conta nunca devem ser adicionadas ao repositório.
+
+- src/engine.js: regras de combate e evoluções.
+- src/data.js: fadas, armas, receitas, melhorias e temas.
+- src/ledger.js: convergência do progresso da equipa.
+- src/cloud.js: autenticação e sincronização HTTPS.
+- src/main.js: interface, input e coordenação da partida.
+- app/src/main/java/pt/magix/duet/MainActivity.java: aplicação Android, servidor TCP local, backups e partilha.
+- supabase/schema.sql: esquema e controlo de acesso.
+- supabase/verify.sql: verificações transacionais com dados de teste revertidos.
+
+A compilação e os testes de navegador não substituem a verificação em dois telemóveis físicos; o teste de rede no navegador usa um transporte de teste.

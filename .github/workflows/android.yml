@@ -3,13 +3,115 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/android.yml', 'src/**', 'app/**', 'scripts/**', 'tests/**', '*.json', '*.gradle', '*.properties']
+    paths: ['.github/workflows/android.yml', 'src/**', 'app/**', 'scripts/**', 'tests/**', '*.json', '*.js', '*.gradle', '*.properties']
 permissions:
   contents: write
+concurrency:
+  group: magix-android-main
+  cancel-in-progress: true
 jobs:
-  prepare:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Check project structure
-        run: test -f app/src/main/AndroidManifest.xml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify combat and save convergence
+        run: npm test
+      - name: Build offline Android assets
+        run: npm run build
+      - name: Install Chromium for mobile UI verification
+        run: npx playwright install --with-deps chromium
+      - name: Verify mobile controls and two-peer cooperation
+        run: npm run test:ui
+      - name: Retain mobile verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-qa
+          path: |
+            qa/
+            playwright-report/
+            test-results/
+            package-lock.json
+          retention-days: 30
+      - name: Record screenshot blobs for visual inspection
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs');
+            for(const name of ['home','game','book']){
+              const file='qa/'+name+'.png';
+              if(!fs.existsSync(file)) continue;
+              const r=await github.rest.git.createBlob({...context.repo,encoding:'base64',content:fs.readFileSync(file).toString('base64')});
+              core.info('QA_IMAGE '+name+' '+r.data.sha);
+            }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-assets
+          path: app/src/main/assets/
+          retention-days: 7
+  apk:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-assets
+          path: app/src/main/assets/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Retain development signing identity between builds
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: magix-duet-development-signing-v1
+      - name: Compile Android app
+        run: gradle --no-daemon assembleDebug
+      - name: Verify APK signature and Android package
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.1.0.apk
+          sdkmanager 'build-tools;35.0.0' >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.1.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.1.0.apk
+          cd dist
+          sha256sum Magix-Duet-0.1.0.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Magix-Duet-Android
+          path: dist/
+          retention-days: 90
+      - name: Publish downloadable Android beta
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0
+          target_commitish: ${{ github.sha }}
+          name: Magix Duet 0.1.0 — Android beta
+          prerelease: true
+          body: |
+            APK Android para instalar e partilhar.
+            - 6 fadas, ataques automáticos, bosses, evoluções, fusões e transformações.
+            - Cooperativo para dois na mesma rede Wi-Fi ou hotspot. Um telemóvel aloja a partida.
+            - Contas e progresso de equipa na cloud; saves locais e exportação de cópias de segurança.
+            - Livro de combinações no menu de pausa.
+            Android 8.0 ou superior, com Android System WebView atualizado.
+            Esta é uma versão beta assinada para desenvolvimento. Não foi publicada na Play Store.
+            Verificações automáticas: simulação de combate, convergência de saves, interface mobile, sessão com dois pares e assinatura do APK.
+          files: |
+            dist/Magix-Duet-0.1.0.apk
+            dist/SHA256SUMS.txt

@@ -13,12 +13,12 @@ export function validateTeam(raw){
  if(!raw||raw.version!==1||typeof raw.id!=='string'||raw.id.length>100||!Array.isArray(raw.events)||raw.events.length>15000)throw new Error('Esta cópia de segurança não é uma equipa Magix Duet válida.');
  return{version:1,id:raw.id,name:String(raw.name||'A nossa equipa').slice(0,40),creator:String(raw.creator||'').slice(0,100),events:raw.events.map(cleanEvent).filter(Boolean)};
 }
-function eventRank(e){return JSON.stringify(e);}
+function compareEvents(a,b){const av=[a.type==='run'?a.duration:0,a.order||0,String(a.device||''),a.coins||0,JSON.stringify(a)],bv=[b.type==='run'?b.duration:0,b.order||0,String(b.device||''),b.coins||0,JSON.stringify(b)];for(let i=0;i<av.length;i++){if(av[i]>bv[i])return 1;if(av[i]<bv[i])return -1;}return 0;}
 export function mergeTeam(a,b){
  a=validateTeam(a);b=validateTeam(b);if(a.id!==b.id)throw new Error('Estas equipas são diferentes.');
  const map=new Map();for(const e of [...a.events,...b.events]){
   const old=map.get(e.id);
-  if(!old||e.type==='run'&&old.type==='run'&&(e.duration>old.duration||e.duration===old.duration&&eventRank(e)>eventRank(old))||e.type!=='run'&&eventRank(e)>eventRank(old))map.set(e.id,e);
+  if(!old||compareEvents(e,old)>0)map.set(e.id,e);
  }
  return{...a,name:[a.name,b.name].sort()[0],creator:[a.creator,b.creator].sort()[0],events:[...map.values()].sort((x,y)=>x.id.localeCompare(y.id))};
 }

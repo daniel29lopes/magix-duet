@@ -5,11 +5,17 @@ const caps={w:2200,h:2200};
 export class Game {
  constructor({fairies=['bloom'],names=['Tu'],upgrades={},unlocks=[],runId='local',random=Math.random}={}){
   this.random=random;this.id=0;this.spawn=0;this.bosses=new Set();this.weaponClocks={};this.in={};
-  this.s={version:1,runId,time:0,level:1,xp:0,xpNeed:24,kills:0,coins:0,bossKills:0,bond:0,bondBursts:0,over:false,won:false,pause:null,guestAck:0,unlocks:[...unlocks],players:[],enemies:[],shots:[],gems:[],chests:[],fx:[],projectiles:[]};
+  this.s={version:1,runId,time:0,level:1,xp:0,xpNeed:20,kills:0,coins:0,bossKills:0,bond:0,bondBursts:0,over:false,won:false,pause:null,guestAck:0,unlocks:[...unlocks],players:[],enemies:[],shots:[],gems:[],chests:[],fx:[],projectiles:[]};
   this.upgrades=upgrades;
   fairies.forEach((id,i)=>{const f=FAIRIES.find(f=>f.id===id)||FAIRIES[0];const max=100+(upgrades.vigor||0)*8;
    this.s.players.push({id:i,name:String(names[i]||('Fada '+(i+1))).slice(0,24),fairy:f.id,x:1100+i*70,y:1100,hp:max,maxHp:max,down:false,revive:0,shield:0,inv:0,ultimate:0,weapons:[{id:f.weapon,level:1,evolved:false}],passives:{},evolvedEver:[],fusionEver:[],transform:0,stats:{gems:0,healed:0,sonicKills:0,droneKills:0,waterHits:0,boss:0},rerolls:2});
   });
+ }
+ save(){return JSON.parse(JSON.stringify({state:this.s,id:this.id,spawn:this.spawn,bosses:[...this.bosses],clocks:this.weaponClocks,upgrades:this.upgrades}));}
+ static restore(raw){
+  if(!raw?.state||raw.state.version!==1||raw.state.players?.length!==1||raw.state.over||!Array.isArray(raw.state.enemies)||raw.state.enemies.length>200)throw new Error('Partida guardada inválida.');
+  const g=new Game({fairies:raw.state.players.map(p=>p.fairy),runId:raw.state.runId,upgrades:raw.upgrades||{}});
+  g.s=raw.state;g.id=Number(raw.id)||0;g.spawn=Number(raw.spawn)||0;g.bosses=new Set(raw.bosses||[]);g.weaponClocks=raw.clocks||{};if(g.s.pause?.kind==='menu')g.s.pause=null;return g;
  }
  next(){return ++this.id;}
  rand(a,b){return a+this.random()*(b-a);}
@@ -30,11 +36,12 @@ export class Game {
   const shuffled=list.map(o=>({o,n:this.random()})).sort((a,b)=>a.n-b.n).map(x=>x.o);
   let result=shuffled.slice(0,3);
   if(preferred.length&&this.random()<.65&&!result.some(o=>preferred.some(a=>a.id===o.id)))result[2]=preferred[Math.floor(this.random()*preferred.length)];
+  const equipped=shuffled.filter(o=>o.kind==='weapon'&&p.weapons.some(w=>w.id===o.id.slice(2)));if(equipped.length)result[0]=equipped[0];if(preferred.length)result[1]=preferred[Math.floor(this.random()*preferred.length)];result=[...new Map(result.map(o=>[o.id,o])).values()];for(const o of shuffled){if(result.length>=3)break;if(!result.some(r=>r.id===o.id))result.push(o);}
   if(!result.length)result=[{id:'heal',name:'Sopro de vida',icon:'♥',level:1,text:'Recupera 40 de vida e ganha 15 moedas.'}];
   return result;
  }
  levelUp(){
-  const s=this.s;s.level++;s.xp-=s.xpNeed;s.xpNeed=24+s.level*5;
+  const s=this.s;s.level++;s.xp-=s.xpNeed;s.xpNeed=20+s.level*4;
   s.pause={id:this.next(),kind:'upgrade',choices:s.players.map((p,i)=>p.down?[]:this.options(i)),picked:s.players.map(p=>p.down),ready:s.players.map(()=>false)};
  }
  choice(i,id){
@@ -65,7 +72,7 @@ export class Game {
  stats(p){
   const a=p.passives,u=this.upgrades;return{power:(1+.08*(a.heart||0)+.06*(u.power||0))*(1+p.transform*.2),
    haste:1+.06*(a.core||0)+.03*(u.haste||0),area:1+.06*(a.fork||0),speed:165*(1+.05*(a.pearl||0)),
-   regen:.12*(u.recovery||0)+.25*(a.seed||0),magnet:80+22*(a.magnet||0)+12*(u.reach||0),
+   regen:.12*(u.recovery||0)+.25*(a.seed||0),magnet:125+22*(a.magnet||0)+12*(u.reach||0),
    crit:.05+.05*(a.prism||0),resist:.04*(a.moonstone||0),duration:1+.1*(a.hourglass||0)};
  }
  checkTransform(p){
@@ -87,7 +94,7 @@ export class Game {
   if(e.hp<=0)return;const st=this.stats(p),crit=this.random()<st.crit,damage=amount*(crit?1.7:1)*(e.sonic>0?1.18:1);
   e.hp-=damage;this.effect(e.x,e.y-15,Math.round(damage).toString(),crit?'#ffe6a3':'#e9dfff');
   if(e.hp>0||!tag)return;
-  const s=this.s;s.kills++;p.ultimate=Math.min(100,p.ultimate+2.5);
+  const s=this.s;s.kills++;s.xp+=1;p.ultimate=Math.min(100,p.ultimate+2.5);
   if(e.sonic>0)p.stats.sonicKills++;if(['discs','orchestra'].includes(weapon))p.stats.droneKills++;
   s.gems.push({id:this.next(),x:e.x,y:e.y,v:e.boss?60:e.elite?12:3});
   if(e.boss){s.bossKills++;for(const ally of s.players)ally.stats.boss++;s.chests.push({id:this.next(),x:e.x,y:e.y});this.effect(e.x,e.y,'BOSS DERROTADO','#ffdfa2','burst');if(e.final)this.finish(true);}

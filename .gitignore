@@ -6,3 +6,7 @@ app/src/main/assets/bundle.js
 app/src/main/assets/config.js
 *.jks
 *.keystore
+www/
+qa/
+test-results/
+playwright-report/
