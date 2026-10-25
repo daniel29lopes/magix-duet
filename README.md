@@ -1,5 +1,5 @@
 # Magix Duet
 
-Jogo cooperativo Android de fadas mágicas. Desenvolvimento em curso.
+Jogo Android cooperativo de fadas, com partidas alojadas num dos telemóveis por Wi-Fi/hotspot e sincronização opcional do progresso de equipa na cloud.
 
-O APK e a configuração online serão documentados após a compilação e validação.
+Desenvolvimento em curso. O APK será publicado após compilação e verificações.
