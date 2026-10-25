@@ -126,3 +126,6 @@ body{background:#171329}.shell{background:radial-gradient(ellipse at 80% 5%,#8c4
 @media(max-height:550px) and (orientation:landscape){.ultimate{bottom:76px;width:69px;height:69px;right:30px}.ultimate>.spell-art{width:46px;height:46px}.stick{bottom:70px}.hud-bottom{bottom:10px}.game-tip{bottom:135px}.bond-meter{top:85px}.pin-hud{top:100px}.boss-hud{top:70px}.modal .run-stats{margin:10px 0;padding:5px 0}.modal .stack{gap:8px}.result-character{height:125px;width:94px}}
 
 .recipe-info{min-width:32px;min-height:32px}.pin-recipe{min-width:34px;min-height:32px}.visual-recipe header{min-height:30px}
+
+@media(max-width:749px){.stage-character{right:-38px;bottom:-85px}}
+@media(max-width:375px){.stage-character{right:-40px;bottom:-83px}}

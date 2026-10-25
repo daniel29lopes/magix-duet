@@ -4,12 +4,12 @@ async function setup(page,name='Daniel'){
 }
 test('Mobile home, movement, pause and full recipe book',async({page})=>{
  const errors=[];page.on('pageerror',e=>errors.push(e.message));await setup(page);
- await expect(page.locator('.fairy-card')).toHaveCount(6);await page.screenshot({path:'qa/home.png'});
+ await expect(page.locator('.fairy-card')).toHaveCount(6);await page.screenshot({animations:'disabled',path:'qa/home.png'});
  await page.locator('[data-action="solo"]').click();
  const before=await page.evaluate(()=>window.MagixTest.world.players[0].x);await page.keyboard.down('d');await expect.poll(()=>page.evaluate(()=>window.MagixTest.world.players[0].x)).toBeGreaterThan(before+45);await page.keyboard.up('d');
- await page.evaluate(()=>{const g=window.MagixTest.game;for(let i=0;i<1200&&!g.s.over;i++){if(g.s.pause?.kind==='upgrade')g.choice(0,g.s.pause.choices[0][0].id);g.step(1/60);}if(g.s.pause?.kind==='upgrade')g.choice(0,g.s.pause.choices[0][0].id);g.s.xp=0;});await expect.poll(()=>page.evaluate(()=>window.MagixTest.world?.time)).toBeGreaterThan(18);await page.screenshot({path:'qa/game.png'});await page.locator('[data-action="pause"]').click();await expect(page.getByRole('heading',{name:'Pausa',exact:true})).toBeVisible();
+ await page.evaluate(()=>{const g=window.MagixTest.game;g.input(0,0,0);for(let i=0;i<1200&&!g.s.over;i++){if(g.s.pause?.kind==='upgrade')g.choice(0,g.s.pause.choices[0][0].id);g.step(1/60);}if(g.s.pause?.kind==='upgrade')g.choice(0,g.s.pause.choices[0][0].id);g.s.xp=0;});await expect.poll(()=>page.evaluate(()=>window.MagixTest.world?.time)).toBeGreaterThan(18);await page.screenshot({animations:'disabled',path:'qa/game.png'});await page.locator('[data-action="pause"]').click();await expect(page.getByRole('heading',{name:'Pausa',exact:true})).toBeVisible();
  const paused=await page.evaluate(()=>window.MagixTest.world.time);await page.locator('[data-action="pause-book"]').click();await page.locator('#book-search').fill('Supernova');await expect(page.locator('.recipe')).toHaveCount(1);await expect(page.locator('.recipe').getByRole('img',{name:'Prisma de Luz',exact:true})).toBeVisible();await expect(page.locator('.recipe .spell-art')).toHaveCount(3);await page.locator('[data-action="pin"]').click();
- await page.screenshot({path:'qa/book.png'});expect(await page.evaluate(()=>window.MagixTest.world.time)).toBe(paused);
+ await page.screenshot({animations:'disabled',path:'qa/book.png'});expect(await page.evaluate(()=>window.MagixTest.world.time)).toBe(paused);
  await page.locator('[data-action="pause-book-back"]').click();await page.locator('[data-action="resume-game"]').click();await expect.poll(()=>page.evaluate(()=>window.MagixTest.world.pause)).toBeNull();expect(errors).toEqual([]);
 });
 test('Level-up choices apply and the game resumes',async({page})=>{
@@ -41,7 +41,7 @@ test('Cloud username accounts and recovery codes keep passwords out of saves',as
   if(url.includes('/magix_create_team')){doc=JSON.parse(route.request().postData()).p_doc;result={team:doc,code:'ABCDEF123456',members:[{id:'test-user',name:'Daniel'}]};}
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
  });
- await setup(page);await page.locator('[data-action="page"][data-value="team"]').click();await page.locator('[data-action="cloud"]').click();
+ await setup(page);await page.locator('.nav [data-action="page"][data-value="team"]').click();await page.locator('[data-action="cloud"]').click();
  await page.locator('#auth-form input[name="username"]').fill('test_account');await page.locator('#auth-form input[name="password"]').fill('OnlyForThisTest123!');
  await page.locator('#auth-form button[value="signup"]').click();await expect(page.getByText('Guarda este código.',{exact:true})).toBeVisible();await page.locator('[data-action="cloud-continue"]').click();await expect(page.locator('[data-action="cloud-create"]')).toBeVisible();
  await page.locator('[data-action="cloud-create"]').click();await expect(page.locator('.invite')).toContainText('ABCDEF123456');
@@ -50,8 +50,8 @@ test('Cloud username accounts and recovery codes keep passwords out of saves',as
 
 test('Image-first recipe book exposes fusions and all five map consumables',async({page})=>{
  await setup(page);await page.locator('[data-action="page"][data-value="book"]').click();await page.locator('[data-action="book-tab"][data-value="fusions"]').click();await expect(page.locator('.recipe')).toHaveCount(5);
- await expect(page.locator('.recipe').first().getByRole('img',{name:'Fénix Celestial',exact:true})).toBeVisible();await page.screenshot({path:'qa/fusions.png'});
- await page.locator('[data-action="book-tab"][data-value="loot"]').click();await expect(page.locator('.loot-recipe')).toHaveCount(5);await expect(page.getByText('Estrela Nova',{exact:true})).toBeVisible();await page.screenshot({path:'qa/pickups.png'});
+ await expect(page.locator('.recipe').first().getByRole('img',{name:'Fénix Celestial',exact:true})).toBeVisible();await page.screenshot({animations:'disabled',path:'qa/fusions.png'});
+ await page.locator('[data-action="book-tab"][data-value="loot"]').click();await expect(page.locator('.loot-recipe')).toHaveCount(5);await expect(page.getByText('Estrela Nova',{exact:true})).toBeVisible();await page.screenshot({animations:'disabled',path:'qa/pickups.png'});
 });
 test('Solo save-and-leave resumes the same game instead of ending the run',async({page})=>{
  await setup(page);await page.locator('[data-action="solo"]').click();await page.evaluate(()=>{window.MagixTest.game.s.time=22;});const run=await page.evaluate(()=>window.MagixTest.world.runId);
