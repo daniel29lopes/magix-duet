@@ -117,14 +117,20 @@ public final class MainActivity extends Activity {
    }catch(Exception e){if(epoch.get()==generation)emit("networkError","Não foi possível criar a sala. Liga o Wi-Fi ou um hotspot e tenta novamente.");}
   });
  }
+ private String extractInvitation(String value){
+  if(value==null)return "";
+  java.util.regex.Matcher match=java.util.regex.Pattern.compile("magix-duet://join\\?[^\\s]+|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}:[0-9]{1,5}#[0-9]{8}").matcher(value.trim());
+  return match.find()?match.group():value.trim();
+ }
  private void connect(String invitation){
+  final String cleanInvitation=extractInvitation(invitation);
   closeNetwork();final int generation=epoch.get();
   workers.execute(()->{
    Socket socket=new Socket();
    try{
     String host,code;int port;
-    if(invitation.startsWith("magix-duet://")){Uri u=Uri.parse(invitation);host=u.getQueryParameter("ip");code=u.getQueryParameter("code");port=Integer.parseInt(u.getQueryParameter("port"));}
-    else{String[] p=invitation.trim().split("#",2),address=p[0].split(":",2);host=address[0];port=Integer.parseInt(address[1]);code=p[1];}
+    if(cleanInvitation.startsWith("magix-duet://")){Uri u=Uri.parse(cleanInvitation);host=u.getQueryParameter("ip");code=u.getQueryParameter("code");port=Integer.parseInt(u.getQueryParameter("port"));}
+    else{String[] p=cleanInvitation.trim().split("#",2),address=p[0].split(":",2);host=address[0];port=Integer.parseInt(address[1]);code=p[1];}
     if(host==null||!localAddress(host)||port<1||port>65535||code==null||!code.matches("[0-9]{8}"))throw new IllegalArgumentException();
     socket.connect(new InetSocketAddress(host,port),12000);socket.setTcpNoDelay(true);socket.setSoTimeout(12000);
     OutputStream stream=new BufferedOutputStream(socket.getOutputStream());JSONObject hello=new JSONObject();hello.put("protocol",1);hello.put("code",code);

@@ -1,5 +1,6 @@
 import {build} from 'esbuild';import fs from 'node:fs';
 await build({entryPoints:['src/main.js'],bundle:true,format:'iife',target:['chrome100'],minify:true,outfile:'app/src/main/assets/bundle.js',legalComments:'eof'});
 fs.rmSync('www',{recursive:true,force:true});fs.mkdirSync('www',{recursive:true});
-for(const file of ['index.html','styles.css','bundle.js'])fs.copyFileSync('app/src/main/assets/'+file,'www/'+file);
+for(const file of ['index.html','styles.css','visual.css','bundle.js'])fs.copyFileSync('app/src/main/assets/'+file,'www/'+file);
+fs.cpSync('app/src/main/assets/art','www/art',{recursive:true});
 console.log('Assets Android compilados: jogo local e sincronização cloud opcional.');

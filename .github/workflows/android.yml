@@ -45,7 +45,7 @@ jobs:
         with:
           script: |
             const fs=require('fs');
-            for(const name of ['home','game','book']){
+            for(const name of ['home','game','book','fusions','pickups']){
               const file='qa/'+name+'.png';
               if(!fs.existsSync(file)) continue;
               const r=await github.rest.git.createBlob({...context.repo,encoding:'utf-8',content:fs.readFileSync(file).toString('base64')});
@@ -53,6 +53,11 @@ jobs:
             }
             const lock=await github.rest.git.createBlob({...context.repo,encoding:'utf-8',content:fs.readFileSync('package-lock.json','utf8')});
             core.info('LOCKFILE_BLOB '+lock.data.sha);
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-previews
+          path: qa/*.png
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: android-assets
@@ -68,6 +73,10 @@ jobs:
         with:
           name: android-assets
           path: app/src/main/assets/
+      - uses: actions/download-artifact@v4
+        with:
+          name: visual-previews
+          path: qa/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -101,11 +110,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.1.1.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.1.1.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.1.1.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Magix-Duet-0.2.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs dist/Magix-Duet-0.2.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging dist/Magix-Duet-0.2.0.apk
+          node scripts/check-signature.mjs dist/Magix-Duet-0.2.0.apk
           cd dist
-          sha256sum Magix-Duet-0.1.1.apk > SHA256SUMS.txt
+          sha256sum Magix-Duet-0.2.0.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Magix-Duet-Android
@@ -114,13 +124,18 @@ jobs:
       - name: Publish downloadable Android beta
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.1
+          tag_name: v0.2.0
           target_commitish: ${{ github.sha }}
-          name: Magix Duet 0.1.1 — Android beta
+          name: Magix Duet 0.2.0 — Android beta
           prerelease: true
           body: |
             APK Android para instalar e partilhar.
-            - 6 fadas, ataques automáticos, bosses, evoluções, fusões e transformações.
+            - Novo visual Fairycore Y2K: personagens ilustradas, asas animadas, magia e inimigos.
+            - 4 arenas ilustradas com partículas e efeitos de combate.
+            - Consumíveis no mapa: vida, moedas, íman de ecrã, Estrela Nova e proteção.
+            - Combinações por imagens, com níveis e receitas fixadas.
+            - Guardar e retomar a mesma partida a solo.
+            - Atualização com a mesma assinatura da versão 0.1.1.
             - Cooperativo para dois na mesma rede Wi-Fi ou hotspot. Um telemóvel aloja a partida.
             - Contas e progresso de equipa na cloud; saves locais e exportação de cópias de segurança.
             - Livro de combinações no menu de pausa.
@@ -128,5 +143,10 @@ jobs:
             Esta é uma versão beta assinada para desenvolvimento. Não foi publicada na Play Store.
             Verificações automáticas: simulação de combate, convergência de saves, interface mobile, sessão com dois pares e assinatura do APK.
           files: |
-            dist/Magix-Duet-0.1.1.apk
+            dist/Magix-Duet-0.2.0.apk
             dist/SHA256SUMS.txt
+            qa/home.png
+            qa/game.png
+            qa/book.png
+            qa/fusions.png
+            qa/pickups.png

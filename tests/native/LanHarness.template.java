@@ -27,7 +27,7 @@ public final class LanHarness{
    for(int i=0;i<75;i++)host.send("{\"sequence\":"+i+"}");
    for(int i=0;i<75;i++)check(new JSONObject(guest.next("data").text).getInt("sequence")==i,"TCP message ordering failed");
    guest.closeNetwork();host.next("disconnected");
-   rejoined.connect("magix-duet://join?ip=127.0.0.1&port="+port+"&code="+code);host.next("connected");rejoined.next("connected");
+   rejoined.connect("Vamos jogar Magix Duet!\nmagix-duet://join?ip=127.0.0.1&port="+port+"&code="+code+"\nOu cola o convite na app.");host.next("connected");rejoined.next("connected");
    host.send("{\"type\":\"resume\"}");check(rejoined.next("data").text.contains("resume"),"Rejoin could not receive resumed world");
    System.out.println("PASS native LAN: code rejection, two TCP peers, UTF-8, inputs, ordered snapshots and reconnection.");
   }finally{host.stop();guest.stop();rejoined.stop();}

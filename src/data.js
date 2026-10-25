@@ -55,3 +55,17 @@ export const ACHIEVEMENTS=[
 ];
 export function weaponInfo(id){return WEAPONS[id]||FUSIONS.find(f=>f.id===id);}
 export const THEMES=[{id:'magix',name:'Magix',subtitle:'Fadas, asas e magia',available:true},{id:'lunar',name:'Reino Lunar',subtitle:'Paleta alternativa desbloqueada',available:true}];
+
+export const ARENAS=[
+{id:'forest',name:'Floresta de Alfea',short:'Floresta',index:0,color:'#87dfbc'},
+{id:'courtyard',name:'Pátio de Alfea',short:'Alfea',index:1,color:'#ffd397'},
+{id:'crystal',name:'Jardim de Cristal',short:'Cristal',index:2,color:'#9de8ff'},
+{id:'lunar',name:'Reino Lunar',short:'Lunar',index:3,color:'#c2acff'}
+];
+export const LOOT={
+heal:{name:'Orvalho de Vida',color:'#ff91c0',icon:35,description:'+30 de vida',value:30},
+coins:{name:'Bolsa Encantada',color:'#ffdc83',icon:36,description:'Moedas para a equipa',value:20},
+magnet:{name:'Íman Cósmico',color:'#e4a9ff',icon:37,description:'Recolhe tudo o que está no ecrã',value:0},
+nova:{name:'Estrela Nova',color:'#ffce92',icon:38,description:'Explosão sobre os inimigos visíveis',value:0},
+shield:{name:'Bênção de Alfea',color:'#a2e7ff',icon:39,description:'5 segundos de proteção',value:5}
+};
